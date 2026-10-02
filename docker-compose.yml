@@ -1,0 +1,37 @@
+# Compose 파일 문법 버전 명시
+# (예전 Compose는 이 값으로 사용할 문법 규칙을 정했는데, 최신 Docker Compose는 이 줄을 무시하고 경고만 띄움)
+version: "3"
+
+# 함께 띄울 컨테이너(서비스)들의 묶음. 서비스 1개 = 컨테이너 1개
+# 같은 파일에 있는 서비스들은 같은 네트워크로 묶여서 서비스 이름으로 서로 접근할 수 있음
+services:
+  # 서비스 1: postgres DB
+  postgres:
+    container_name: compose-postgres-db
+    # 이미 만들어져있는 postgres:15 이미지 사용
+    image: postgres:15
+    # DB 초기 설정용 환경변수 (계정, 처음 만들 데이터베이스 이름)
+    environment:
+      POSTGRES_USER: "root"
+      POSTGRES_PASSWORD: "root"
+      POSTGRES_DB: "example"  # 처음 만들어지는 DB 이름 (테이블은 안 생김)
+    # 호스트포트:컨테이너포트 → 호스트 5432로 들어온 요청을 컨테이너 5432로 전달
+    ports:
+      - "5432:5432"
+
+  # 서비스 2: Spring Boot 애플리케이션
+  spring-app:
+    container_name: compose-spring-app
+    image: compose-codeit-docker:spring
+    # 직접 만든 앱이라 이미지가 없음 → compose 파일과 같은 경로의 Dockerfile로 빌드
+    build: .
+    # 호스트포트:컨테이너포트 → 호스트 8083으로 들어온 요청을 컨테이너 8080으로 전달
+    ports:
+      - "8083:8080"
+    # 컨테이너 실행 시 넘겨줄 환경변수
+    environment:
+      SPRING_PROFILE: develop
+    # postgres 컨테이너를 먼저 "시작"한 뒤 spring-app 시작
+    # (시작 순서만 보장하고, DB가 접속 가능한 상태가 될 때까지 기다려주지는 않음)
+    depends_on:
+      - postgres
