@@ -1,58 +1,50 @@
 package com.example.demo.controller;
 
-import com.example.demo.service.User;
-import com.example.demo.service.UserServiceInterface;
-import lombok.AccessLevel;
-import lombok.RequiredArgsConstructor;
-import lombok.experimental.FieldDefaults;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationContext;
-import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseBody;
-
+import java.sql.SQLException;
 import java.util.List;
 
-@Controller
-@RequestMapping("/users")
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.example.demo.controller.dto.UserCreateRequestDto;
+import com.example.demo.controller.dto.UserResponseDto;
+import com.example.demo.service.UserService;
+
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
+
+@RestController
+@RequestMapping("/api/users")
 @RequiredArgsConstructor
-@FieldDefaults(makeFinal = true, level = AccessLevel.PRIVATE)
 public class UserController {
-    UserServiceInterface userService;
+    private final UserService userService;
 
-    @Autowired
-    private ApplicationContext applicationContext;
-
-    @GetMapping("/bean")
-    @ResponseBody
-    public String bean() {
-        return applicationContext.getBean(UserServiceInterface.class).toString();
+    @ResponseStatus(HttpStatus.OK)
+    @RequestMapping(method = RequestMethod.GET, value = "/{id}")
+    public UserResponseDto retrieve(@PathVariable @NonNull Integer id) throws SQLException {
+        return userService.findById(id);
     }
 
-    @GetMapping("")
-    public String userPage(Model model) {
-        List<User> users = userService.findAll();
-        model.addAttribute("users", users);
-        return "users/list";
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @RequestMapping(method = RequestMethod.DELETE, value = "/{id}")
+    public void delete(@PathVariable @NonNull Integer id) throws SQLException {
+        userService.delete(id);
     }
 
-    @GetMapping("/1/detail")
-    public String detailPage(Model model) {
-        User user = userService.findById(1);
-        model.addAttribute("id", user.getId());
-        model.addAttribute("name", user.getName());
-        model.addAttribute("age", user.getAge());
-        model.addAttribute("job", user.getJob());
-        model.addAttribute("specialty", user.getSpecialty());
-        return "users/detail";
+    @ResponseStatus(HttpStatus.OK)
+    @RequestMapping(method = RequestMethod.GET, value = "")
+    public List<UserResponseDto> retrieve() throws SQLException {
+        return userService.findAll();
     }
 
-    @GetMapping("/1/data")
-    @ResponseBody
-    public User detailData() {
-        User user = userService.findById(1);
-        return user;
+    @ResponseStatus(HttpStatus.CREATED)
+    @RequestMapping(method = RequestMethod.POST, value = "")
+    public UserResponseDto create(@RequestBody UserCreateRequestDto request) throws SQLException {
+        return userService.create(request);
     }
 }

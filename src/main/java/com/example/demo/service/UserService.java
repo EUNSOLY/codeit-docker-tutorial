@@ -1,27 +1,54 @@
 package com.example.demo.service;
 
+import com.example.demo.controller.dto.UserCreateRequestDto;
+import com.example.demo.controller.dto.UserResponseDto;
+import com.example.demo.repository.*;
+import com.example.demo.repository.User;
+import com.example.demo.transaction.CustomTransaction;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
-import java.util.HashMap;
+import javax.sql.DataSource;
+import java.sql.SQLException;
+import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 @Service
-public class UserService implements UserServiceInterface {
-    private static final Map<Integer, User> users;
+@RequiredArgsConstructor
+public class UserService {
+    private final DataSource dataSource;
+    private final TransactionTemplate transactionTemplate;
+    private final UserRepository userRepository;
+    private final MessageRepository messageRepository;
 
-    static {
-        users = new HashMap<>();
-        users.put(1, new User(1, "Aaron", 10, "Developer", "Backend"));
-        users.put(2, new User(2, "Baron", 20, "Developer", "Frontend"));
-        users.put(3, new User(3, "Caron", 30, "Engineer", "DevOps/SRE"));
+    public UserResponseDto findById(Integer id) {
+        com.example.demo.repository.User retrievedUser = userRepository.findById(id).orElseThrow();
+        //      List<Message> retrievedMessages = messageRepository.findByUserId(id).orElseThrow();
+        return UserResponseDto.from(retrievedUser);
     }
 
-    public User findById(Integer id) {
-        return users.get(id);
+    public List<UserResponseDto> findAll() {
+        List<com.example.demo.repository.User> retrievedUsers = userRepository.findAll();
+        return retrievedUsers.stream()
+            .map(UserResponseDto::from)
+            .toList();
     }
 
-    public List<User> findAll() {
-        return users.values().stream().toList();
+    @CustomTransaction
+    public UserResponseDto create(UserCreateRequestDto request) {
+        com.example.demo.repository.User creatingUser = request.toCreating();
+        creatingUser.setWelcomeMessages();
+        User createdUser = userRepository.save(creatingUser);
+        //      Message createdMessages = messageRepository.save(Message.creating(createdUser.getName() + "님 회원가입 감사드립니다!", createdUser));
+        return UserResponseDto.from(createdUser);
+    }
+
+    @Transactional
+    public void delete(Integer id) {
+        //      User retrievedUser = userRepository.findById(id).orElseThrow();
+        //      userRepository.delete(retrievedUser);
+        userRepository.deleteById(id);
     }
 }

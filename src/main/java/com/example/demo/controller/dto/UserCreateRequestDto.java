@@ -1,0 +1,22 @@
+package com.example.demo.controller.dto;
+
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+
+import com.example.demo.repository.User;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+
+@Getter
+@AllArgsConstructor
+public class UserCreateRequestDto {
+    private String name;
+    private Integer age;
+    private String job;
+    private String specialty = "EMPTY";
+
+    public User toCreating() {
+        return new User(null, this.name, this.age, this.job, this.specialty, LocalDateTime.now(), new ArrayList<>());
+    }
+}
