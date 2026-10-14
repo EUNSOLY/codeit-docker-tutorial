@@ -44,3 +44,75 @@ jobs:                                  # 워크플로우에서 실행할 작업(
       # 2-2. Docker 이미지 Docker Hub에 업로드
       - name: 도커 허브 내 이미지 업로드
         run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/codeit-tutorial   # 태그 생략 시 :latest로 push (빌드한 이름과 일치해야 함)
+
+      # 3. CD - GitHub Actions 가상머신의 공인 IP 확인 (보안그룹에 임시로 열어줄 IP)
+      - name: GitHub Actions IP 확인
+        id: ip                                            # 다른 step에서 steps.ip.outputs.ipv4로 꺼내 쓰기 위한 id
+        uses: haythem/public-ip@v1.3
+
+
+      # 3-1. IAM 엑세스 키로 AWS 권한 취득 (보안그룹 수정용)
+      - name: AWS 인증
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-northeast-2
+
+
+      # 3-2. 보안그룹에 Actions IP의 22번 포트 임시 허용
+      - name: 보안그룹에 Actions IP 추가
+        run: |
+          aws ec2 authorize-security-group-ingress \
+            --group-id ${{ secrets.AWS_SG_ID }} \
+            --protocol tcp --port 22 \
+            --cidr ${{ steps.ip.outputs.ipv4 }}/32
+          
+
+      # 3-3. prod compose를 docker-compose.yml 이름으로 준비
+      - name: 배포용 compose 파일 준비
+        run: |
+          mkdir -p deploy
+          cp docker-compose.prod.yml deploy/docker-compose.yml   # 레포 원본은 그대로, 복사본 이름만 변경
+
+      # 3-4. EC2용 compose 파일을 EC2로 복사
+      - name: compose 파일 EC2로 복사
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.EC2_SSH_PORT }}
+          source: "deploy/docker-compose.yml"
+          target: "~/codeit-tutorial"
+          strip_components: 1        # deploy/ 폴더는 빼고 파일만 올림
+
+      # 3-5. EC2 접속 → .env 생성 → 새 이미지 받아서 compose 실행
+      - name: EC2에서 compose 실행
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.EC2_SSH_PORT }}
+          script: |
+            cd ~/codeit-tutorial
+            cat > .env <<EOF
+            DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
+            DB_NAME=${{ secrets.DB_NAME }}
+            DB_USERNAME=${{ secrets.DB_USERNAME }}
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            EOF
+            docker compose pull       # 최신 이미지 받기
+            docker compose up -d      # 바뀐 컨테이너만 재생성
+            docker image prune -f     # 이전 버전 이미지 정리                    # 이전 버전 이미지 정리
+            
+
+      # 3-6. 임시로 연 22번 포트 닫기 (앞 단계가 실패해도 반드시 실행)
+      - name: 보안그룹에서 Actions IP 삭제
+        if: always()
+        run: |
+          aws ec2 revoke-security-group-ingress \
+            --group-id ${{ secrets.AWS_SG_ID }} \
+            --protocol tcp --port 22 \
+            --cidr ${{ steps.ip.outputs.ipv4 }}/32
