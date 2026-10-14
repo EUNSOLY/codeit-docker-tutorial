@@ -30,7 +30,8 @@ services:
       - "8083:8080"
     # 컨테이너 실행 시 넘겨줄 환경변수
     environment:
-      SPRING_PROFILE: develop
+      SPRING_PROFILE: ${SPRING_PROFILE:-develop}
+#      SPRING_PROFILE: ${SPRING_PROFILE:-local}
     # postgres 컨테이너를 먼저 "시작"한 뒤 spring-app 시작
     # (시작 순서만 보장하고, DB가 접속 가능한 상태가 될 때까지 기다려주지는 않음)
     depends_on:

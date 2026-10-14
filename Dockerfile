@@ -12,6 +12,8 @@ ENV SPRING_PROFILE=$SPRING_PROFILE
 COPY ${JAR_FILE} app.jar
 
 # 이미지가 컨테이너로 실행 될 때 실행될 명령어
-ENTRYPOINT ["java", "-Dspring.profiles.active=${SPRING_PROFILE}", "-jar", "/app.jar"]
+ENTRYPOINT ["java", "-jar", "/app.jar"]
+#ENTRYPOINT ["java", "-Dspring.profiles.active=${SPRING_PROFILE}", "-jar", "/app.jar"]
+
 
 # 참고 ./gradlew clean build을 통해 호스트 영역에 파일을 만들어줘야지만 COPY가 정상적으로 실행
