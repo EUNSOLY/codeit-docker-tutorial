@@ -71,7 +71,7 @@ jobs:
             sudo docker rm docker-single-container || true 
             sudo docker rmi ${{ secrets.DOCKERHUB_USERNAME }}/docker-single-container:latest || true 
             sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/docker-single-container:latest
-            sudo docker run -it -d -p 8082:8080 --name docker-single-container ${{ secrets.DOCKERHUB_USERNAME }}/docker-single-container
+            sudo docker run -it -d -p 8082:8080 --name docker-single-container -e SPRING_PROFILE=prod ${{ secrets.DOCKERHUB_USERNAME }}/docker-single-container
             
 
       - name: AWS 내 임시 보안그룹 제거
