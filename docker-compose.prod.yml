@@ -7,6 +7,8 @@ services:
       POSTGRES_DB: ${DB_NAME}            # .env(= GitHub Secrets)에서 치환
       POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5432:5432"
     volumes:
       - db-data:/var/lib/postgresql/data
 

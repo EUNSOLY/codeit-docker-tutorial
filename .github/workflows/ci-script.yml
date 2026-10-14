@@ -105,7 +105,7 @@ jobs:                                  # 워크플로우에서 실행할 작업(
             EOF
             docker compose pull       # 최신 이미지 받기
             docker compose up -d      # 바뀐 컨테이너만 재생성
-            docker image prune -f     # 이전 버전 이미지 정리                    # 이전 버전 이미지 정리
+            docker image prune -f     # 이전 버전 이미지 정리 
             
 
       # 3-6. 임시로 연 22번 포트 닫기 (앞 단계가 실패해도 반드시 실행)
